@@ -1,0 +1,4 @@
+# Keep these out of the deployment — they'd be publicly reachable otherwise.
+index.backup.html
+temple-parts.html
+.claude/

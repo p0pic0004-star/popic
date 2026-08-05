@@ -1,0 +1,12 @@
+# Secrets — never commit these.
+.env
+.env.local
+bot/.env
+
+# Dependencies and generated data
+node_modules/
+bot/feedback.json
+
+# Local working files
+.design-out/
+temple-preview.html

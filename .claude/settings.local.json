@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:/Users/User/Desktop/my-first-project\" && cp index.html index.backup.html && ls -la)"
+    ]
+  }
+}

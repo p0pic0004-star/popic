@@ -1,0 +1,17 @@
+{
+  "name": "popic-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram bot for popic — Mini App cabinet, voice/text feedback via Whisper, document OCR via Claude.",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "dotenv": "^17.0.0",
+    "grammy": "^1.30.0",
+    "openai": "^6.0.0"
+  }
+}

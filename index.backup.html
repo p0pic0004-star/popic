@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>popic</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --gold:      #e8b53a;
+    --gold-soft: #f7e3b0;
+    --ruby:      #b00d28;
+    --wine:      #4a0410;
+    --marble:    #fff8ec;
+    /* aged stone */
+    --stone-lt:  #f0e6d2;
+    --stone:     #d6c5a8;
+    --stone-md:  #b09a7b;
+    --stone-dk:  #7d6a52;
+
+    /* stone texture: coarse blotching + fine grain, generated not painted */
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.014' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23m)' opacity='0.38'/%3E%3Crect width='220' height='220' filter='url(%23f)' opacity='0.22'/%3E%3C/svg%3E");
+  }
+
+  /* every carved surface gets grain + weathering */
+  .pediment, .frieze, .cornice,
+  .abacus, .echinus, .torus, .plinth,
+  .shaft, .stylobate div { position: relative; }
+
+  .pediment::after, .frieze::after, .cornice::after,
+  .abacus::after, .echinus::after, .torus::after, .plinth::after,
+  .shaft::after, .stylobate div::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--grain);
+    background-size: 220px 220px;
+    mix-blend-mode: multiply;
+    opacity: .55;
+    pointer-events: none;
+  }
+
+  body {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 3rem 1.25rem;
+    font-family: Georgia, "Palatino Linotype", "Times New Roman", serif;
+    color: var(--marble);
+    background: linear-gradient(-45deg, #4a0410, #8c0f24, #c2143a, #d4a017, #7b0a1c);
+    background-size: 400% 400%;
+    animation: drift 18s ease infinite;
+    overflow-x: hidden;
+  }
+
+  @keyframes drift {
+    0%   { background-position:   0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position:   0% 50%; }
+  }
+
+  /* ---- floating blobs ---- */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: .55;
+    pointer-events: none;
+    z-index: 0;
+    animation: float 20s ease-in-out infinite;
+  }
+  .blob:nth-child(1) { width: 340px; height: 340px; background: #e8b53a; top: -80px;   left: -60px;  animation-delay:  0s;  }
+  .blob:nth-child(2) { width: 300px; height: 300px; background: #b00d28; bottom: -70px; right: -50px; animation-delay: -5s;  }
+  .blob:nth-child(3) { width: 260px; height: 260px; background: #7a0715; top: 45%;      right: 12%;   animation-delay: -10s; }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0)        scale(1);   }
+    33%      { transform: translate(40px, -50px) scale(1.15);}
+    66%      { transform: translate(-30px, 35px) scale(.9);  }
+  }
+
+  /* ---- temple ---- */
+  .temple {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 860px;
+    animation: rise 1s cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
+
+  /* shared carved-stone surface */
+  .stone {
+    background:
+      linear-gradient(180deg, var(--stone-lt), var(--stone) 45%, var(--stone-md));
+    border: 1px solid var(--stone-dk);
+    box-shadow:
+      inset 0  1px 0 rgba(255,255,255,.75),
+      inset 0 -2px 4px rgba(90,70,50,.35);
+  }
+
+  /* pediment */
+  .pediment {
+    position: relative;
+    height: 96px;
+    margin-bottom: -1px;
+    background: linear-gradient(180deg, var(--stone-lt), var(--stone-md));
+    border: 1px solid var(--stone-dk);
+    border-bottom: none;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    display: grid;
+    place-items: end center;
+    padding-bottom: 1rem;
+    filter: drop-shadow(0 6px 10px rgba(40,2,9,.4));
+  }
+  .pediment span {
+    font-size: 1.7rem;
+    color: var(--ruby);
+    text-shadow: 0 0 14px rgba(232,181,58,.7);
+  }
+
+  /* entablature — the roof beam the columns carry */
+  .frieze {
+    padding: .75rem 1rem;
+    text-align: center;
+    letter-spacing: .4em;
+    text-transform: uppercase;
+    font-size: .78rem;
+    color: #5b4a37;
+    /* incised, not embossed: shadow above the stroke, catchlight below it */
+    text-shadow: 0 -1px 0 rgba(66,49,34,.55),
+                 0  1px 0 rgba(255,255,255,.68);
+  }
+  .cornice {
+    height: 16px;
+    /* projects past the columns, casting weight onto them */
+    margin: 0 -10px;
+    background: linear-gradient(180deg, var(--stone-lt), var(--stone-md));
+    border: 1px solid var(--stone-dk);
+    box-shadow: 0 7px 12px rgba(40,2,9,.45);
+    position: relative;
+    z-index: 3;
+  }
+
+  /* colonnade row: column | cella | column */
+  .colonnade {
+    display: grid;
+    grid-template-columns: 104px 1fr 104px;
+    align-items: stretch;
+  }
+
+  /* ---------- columns ---------- */
+  .column {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 4px 8px rgba(40,2,9,.4));
+  }
+
+  /* capital (top) and base (bottom) flare wider than the shaft */
+  .capital, .base {
+    margin: 0 -9px;
+    flex: 0 0 auto;
+  }
+  .capital .abacus, .base .plinth {
+    height: 15px;
+    background: linear-gradient(180deg, var(--stone-lt), var(--stone-md));
+    border: 1px solid var(--stone-dk);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .capital .echinus, .base .torus {
+    height: 13px;
+    margin: 0 5px;
+    background: linear-gradient(180deg, var(--stone), var(--stone-dk));
+    border: 1px solid var(--stone-dk);
+    border-top: none;
+  }
+  .base .torus { border-top: 1px solid var(--stone-dk); border-bottom: none; }
+
+  /* the shaft — fluted, rounded by light, cracked by age */
+  .shaft {
+    position: relative;
+    flex: 1 1 auto;
+    overflow: hidden;
+    /* entasis: the shaft carries a slight taper, wider at the foot */
+    clip-path: polygon(2.6% 0, 97.4% 0, 100% 100%, 0 100%);
+    /* flutes, barrel shading and wear all live in the SVG layer above */
+    background: linear-gradient(180deg, var(--stone-lt), var(--stone) 55%, var(--stone-md));
+    /* contact shadow where the capital presses down and the base takes the load */
+    box-shadow:
+      inset 0  10px 14px -8px rgba(58,42,30,.65),
+      inset 0 -10px 14px -8px rgba(58,42,30,.6);
+  }
+
+  /* the dark half of the damage multiplies into the stone, so the flutes,
+     the barrel shading and the grain all still read through the break */
+  .flutes, .cracks, .cracks-lit {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .cracks     { mix-blend-mode: multiply; }
+  /* the lit lips screen onto the stone instead, so they brighten what's under them */
+  .cracks-lit { mix-blend-mode: screen; }
+
+  /* ---------- cella — the inner room ---------- */
+  .cella {
+    padding: 3rem 2.5rem;
+    text-align: center;
+    background: rgba(70, 5, 16, .34);
+    border-top:    1px solid rgba(232,181,58,.28);
+    border-bottom: 1px solid rgba(232,181,58,.28);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+  }
+
+  /* stylobate — the steps the columns stand on */
+  .stylobate { margin-top: -1px; position: relative; z-index: 1; }
+  /* each step is laid from separate blocks, and the joints don't line up
+     between courses — staggered, the way masonry is actually bonded */
+  .stylobate div {
+    height: 15px;
+    border: 1px solid var(--stone-dk);
+    border-top: none;
+    background: linear-gradient(180deg, var(--stone-lt), var(--stone-md));
+  }
+  .stylobate div:nth-child(1) {
+    margin: 0 16px;
+    background:
+      repeating-linear-gradient(90deg,
+        transparent 0 92px,
+        rgba(88,70,52,.32) 92px 93px,
+        rgba(255,255,255,.3) 93px 94px,
+        transparent 94px 186px),
+      linear-gradient(180deg, var(--stone-lt), var(--stone-md));
+  }
+  .stylobate div:nth-child(2) {
+    margin: 0 7px;
+    background:
+      repeating-linear-gradient(90deg,
+        transparent 0 47px,
+        rgba(88,70,52,.3) 47px 48px,
+        rgba(255,255,255,.28) 48px 49px,
+        transparent 49px 155px),
+      linear-gradient(180deg, var(--stone-lt), var(--stone-md));
+  }
+  .stylobate div:nth-child(3) {
+    margin: 0;
+    box-shadow: 0 12px 26px rgba(40,2,9,.5);
+    background:
+      repeating-linear-gradient(90deg,
+        transparent 0 118px,
+        rgba(88,70,52,.32) 118px 119px,
+        rgba(255,255,255,.3) 119px 120px,
+        transparent 120px 214px),
+      linear-gradient(180deg, var(--stone-lt), var(--stone-md));
+  }
+
+  h1 {
+    font-size: clamp(3rem, 13vw, 6.5rem);
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-indent: .12em;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #fff8ec, #e8b53a, #b8860b, #f7e3b0, #fff8ec);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shine 5s linear infinite;
+  }
+
+  @keyframes shine {
+    to { background-position: 200% center; }
+  }
+
+  .tagline {
+    margin-top: .75rem;
+    font-size: .95rem;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    color: rgba(255,250,242,.78);
+  }
+
+  .meander { display: block; width: 100%; height: 16px; margin: 2rem 0; opacity: .85; }
+
+  h2 {
+    font-size: 1.05rem;
+    margin-bottom: 1.1rem;
+    color: var(--gold);
+    letter-spacing: .26em;
+    text-transform: uppercase;
+  }
+
+  .about p {
+    font-size: 1.06rem;
+    line-height: 1.85;
+    color: rgba(255,252,246,.93);
+    max-width: 54ch;
+    margin: 0 auto 1.1rem;
+  }
+  .about p:last-child { margin-bottom: 0; }
+
+  /* ---------- hobby tags ---------- */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: .6rem;
+    margin-top: 2.2rem;
+  }
+
+  .tag {
+    font: inherit;
+    font-size: .88rem;
+    letter-spacing: .06em;
+    padding: .55rem 1.1rem;
+    cursor: pointer;
+    border-radius: 3px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(232,181,58,.4);
+    color: rgba(255,252,246,.92);
+    text-align: center;
+    transition: transform .28s cubic-bezier(.2,.8,.2,1),
+                background .28s ease,
+                border-color .28s ease,
+                border-radius .28s ease,
+                box-shadow .28s ease,
+                padding .28s ease,
+                flex-basis .35s ease;
+  }
+  .tag:hover,
+  .tag:focus-visible {
+    transform: translateY(-4px) scale(1.07);
+    background: rgba(232,181,58,.2);
+    border-color: rgba(255,255,255,.65);
+    outline: none;
+  }
+
+  /* clicked open — swells into a soft cloud */
+  .tag.open {
+    flex: 1 1 100%;
+    max-width: 50ch;
+    margin: .3rem auto;
+    padding: 1.15rem 1.6rem 1.35rem;
+    border-radius: 26px;
+    transform: scale(1.02);
+    background: rgba(232,181,58,.16);
+    border-color: rgba(255,255,255,.55);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.18),
+                0 18px 45px rgba(40,2,9,.5),
+                0 0 40px rgba(232,181,58,.18);
+  }
+  .tag.open .label { font-size: 1.02rem; color: var(--gold-soft); }
+
+  .blurb {
+    display: block;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    font-size: .97rem;
+    line-height: 1.7;
+    letter-spacing: normal;
+    color: rgba(255,252,246,.92);
+    transition: max-height .45s ease, opacity .35s ease .1s, margin-top .35s ease;
+  }
+  .tag.open .blurb { max-height: 300px; opacity: 1; margin-top: .85rem; }
+
+  .hint {
+    margin-top: 1rem;
+    font-size: .76rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: rgba(255,250,242,.45);
+  }
+
+  /* narrow screens: drop the columns, keep the temple frame */
+  @media (max-width: 700px) {
+    .colonnade { grid-template-columns: 1fr; }
+    .column    { display: none; }
+    .cella     { padding: 2.25rem 1.4rem; border: 1px solid rgba(232,181,58,.28); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
+
+  <main class="temple">
+    <div class="pediment"><span>&#9670;</span></div>
+    <div class="frieze stone">Pop Ion Nu&#539;u</div>
+    <div class="cornice"></div>
+
+    <div class="colonnade">
+      <!-- left column -->
+      <div class="column">
+        <div class="capital"><div class="abacus"></div><div class="echinus"></div></div>
+        <div class="shaft">
+          <!-- fluting, drum joints, veining and wear -->
+          <svg class="flutes" viewBox="0 0 100 400" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <!-- one concave channel: shadowed left wall, lit right wall -->
+              <linearGradient id="flL" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0"   stop-color="#fff8ec" stop-opacity=".14"/>
+                <stop offset=".2"  stop-color="#4b3826" stop-opacity=".28"/>
+                <stop offset=".4"  stop-color="#4b3826" stop-opacity=".34"/>
+                <stop offset=".6"  stop-color="#4b3826" stop-opacity=".08"/>
+                <stop offset=".8"  stop-color="#fff8ec" stop-opacity=".38"/>
+                <stop offset=".93" stop-color="#fff8ec" stop-opacity=".16"/>
+                <stop offset="1"   stop-color="#4b3826" stop-opacity=".16"/>
+              </linearGradient>
+              <!-- the cylinder itself, lit from the upper left -->
+              <linearGradient id="brL" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0"   stop-color="#3f2e1e" stop-opacity=".62"/>
+                <stop offset=".1"  stop-color="#3f2e1e" stop-opacity=".3"/>
+                <stop offset=".3"  stop-color="#fff8ec" stop-opacity=".16"/>
+                <stop offset=".5"  stop-color="#fff8ec" stop-opacity="0"/>
+                <stop offset=".75" stop-color="#3f2e1e" stop-opacity=".2"/>
+                <stop offset="1"   stop-color="#3f2e1e" stop-opacity=".66"/>
+              </linearGradient>
+              <linearGradient id="wrL" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0" stop-color="#4a3820" stop-opacity=".4"/>
+                <stop offset="1" stop-color="#4a3820" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+
+            <!-- 11 flutes, spaced by angle round the drum so they crowd at the edges -->
+            <g fill="url(#flL)">
+              <rect x="0"     y="0" width="2.02"  height="400"/>
+              <rect x="2.02"  y="0" width="5.92"  height="400"/>
+              <rect x="7.94"  y="0" width="9.31"  height="400"/>
+              <rect x="17.25" y="0" width="11.98" height="400"/>
+              <rect x="29.23" y="0" width="13.66" height="400"/>
+              <rect x="42.89" y="0" width="14.22" height="400"/>
+              <rect x="57.11" y="0" width="13.66" height="400"/>
+              <rect x="70.77" y="0" width="11.98" height="400"/>
+              <rect x="82.75" y="0" width="9.31"  height="400"/>
+              <rect x="92.06" y="0" width="5.92"  height="400"/>
+              <rect x="97.98" y="0" width="2.02"  height="400"/>
+            </g>
+
+            <!-- arrises: the sharp ridges between flutes catch a bright line -->
+            <g fill="#fff8ec" opacity=".2">
+              <rect x="1.79"  y="0" width=".46" height="400"/>
+              <rect x="7.71"  y="0" width=".46" height="400"/>
+              <rect x="17.02" y="0" width=".46" height="400"/>
+              <rect x="29"    y="0" width=".46" height="400"/>
+              <rect x="42.66" y="0" width=".46" height="400"/>
+              <rect x="56.88" y="0" width=".46" height="400"/>
+              <rect x="70.54" y="0" width=".46" height="400"/>
+              <rect x="82.52" y="0" width=".46" height="400"/>
+              <rect x="91.83" y="0" width=".46" height="400"/>
+              <rect x="97.75" y="0" width=".46" height="400"/>
+            </g>
+
+            <rect width="100" height="400" fill="url(#brL)"/>
+
+            <!-- drum joints: the shaft is stacked stone, not one piece -->
+            <g>
+              <rect x="0" y="97"    width="100" height=".9" fill="#4b3826" opacity=".3"/>
+              <rect x="0" y="97.9"  width="100" height=".7" fill="#fff8ec" opacity=".18"/>
+              <rect x="0" y="195"   width="100" height=".9" fill="#4b3826" opacity=".28"/>
+              <rect x="0" y="195.9" width="100" height=".7" fill="#fff8ec" opacity=".16"/>
+              <rect x="0" y="291"   width="100" height=".9" fill="#4b3826" opacity=".3"/>
+              <rect x="0" y="291.9" width="100" height=".7" fill="#fff8ec" opacity=".18"/>
+            </g>
+
+            <!-- veining through the stone -->
+            <g fill="none" stroke="#6b5540" stroke-opacity=".13" stroke-width=".7">
+              <path d="M20 8 C27 60 13 112 23 164 S16 254 27 306 S20 360 25 396"/>
+              <path d="M67 38 C74 92 61 140 71 192 S64 262 73 318"/>
+              <path d="M45 120 C51 160 41 196 48 240"/>
+            </g>
+
+            <!-- ground damp wicking up the foot of the column -->
+            <rect x="0" y="296" width="100" height="104" fill="url(#wrL)"/>
+          </svg>
+
+          <svg class="cracks" viewBox="0 0 100 400" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <!-- a crack is a void: deepest where widest, shallowing to nothing at the tips -->
+              <linearGradient id="voidL" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0"   stop-color="#6d5741" stop-opacity=".10"/>
+                <stop offset=".2"  stop-color="#54402c" stop-opacity=".3"/>
+                <stop offset=".5"  stop-color="#3f2d1c" stop-opacity=".46"/>
+                <stop offset=".8"  stop-color="#54402c" stop-opacity=".28"/>
+                <stop offset="1"   stop-color="#6d5741" stop-opacity=".08"/>
+              </linearGradient>
+              <linearGradient id="stainL" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#7a6039" stop-opacity=".14"/>
+                <stop offset="1" stop-color="#59401f" stop-opacity="0"/>
+              </linearGradient>
+              <filter id="aoL" x="-90%" y="-90%" width="280%" height="280%">
+                <feGaussianBlur stdDeviation="1.15"/>
+              </filter>
+              <filter id="softL" x="-90%" y="-90%" width="280%" height="280%">
+                <feGaussianBlur stdDeviation=".55"/>
+              </filter>
+              <filter id="wetL" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="2.6"/>
+              </filter>
+              <g id="crkL">
+                <path d="M10 46 L18 43.95 L25 44.98 L33 41.8 L39 43.05 L46 39.65 L52 41.32 L59 38.7 L66 40.1 L73 37.2 L80 38.55 L88 36.4 L80 39.05 L73 38.4 L66 40.7 L59 40.1 L52 41.88 L46 41.55 L39 43.75 L33 43.4 L25 45.42 L18 44.85 Z"/>
+                <path d="M45.5 40.6 L49.7 45 L52.85 49 L55 53 L53.15 49 L50.3 45 L46.5 40.6 Z"/>
+                <path d="M8 180 L16 178.2 L23 179.4 L31 176.65 L38 178.3 L45 175.35 L51 177.15 L58 174.8 L65 176.05 L72 173.7 L79 175 L86 173.4 L79 175.4 L72 174.7 L65 176.75 L58 176 L51 177.65 L45 177.05 L38 178.9 L31 178.15 L23 179.8 L16 179 Z"/>
+                <path d="M30.55 177.4 L33.75 172 L35.88 167 L37 162 L36.12 167 L34.25 172 L31.45 177.4 Z"/>
+                <path d="M12 302 L20 300.05 L27 301.22 L35 298.3 L42 299.92 L49 297 L55 298.78 L62 296.25 L69 297.5 L76 295.15 L83 296.6 L76 296.05 L69 298.1 L62 297.35 L55 299.22 L49 298.6 L42 300.48 L35 299.7 L27 301.58 L20 300.75 Z"/>
+              </g>
+            </defs>
+
+            <!-- rain runs out of the cracks and stains the stone below -->
+            <g filter="url(#wetL)" fill="url(#stainL)">
+              <rect x="20" y="44"  width="56" height="26"/>
+              <rect x="18" y="178" width="54" height="24"/>
+              <rect x="20" y="299" width="52" height="24"/>
+            </g>
+
+            <!-- 1. ambient occlusion: light can't fully reach the stone around a break -->
+            <use href="#crkL" fill="rgba(90,72,54,.26)" filter="url(#aoL)"/>
+            <!-- 2. the far wall inside falls into cast shadow -->
+            <use href="#crkL" fill="rgba(74,56,38,.28)" transform="translate(0.38,0.46)" filter="url(#softL)"/>
+            <!-- 3. the void itself, depth-graded (lit lips live in the screen layer below) -->
+            <use href="#crkL" fill="url(#voidL)"/>
+            <!-- hairline micro-fractures spidering off the main breaks -->
+            <g fill="none" stroke="rgba(88,68,50,.24)" stroke-width=".5" stroke-linecap="round">
+              <path d="M33 42.6 l-4.5 3.5"/>
+              <path d="M59 39.4 l3.5 -4"/>
+              <path d="M73 37.8 l3 3.5"/>
+              <path d="M58 175.4 l4 4"/>
+              <path d="M23 179.4 l-4 3"/>
+              <path d="M72 174.2 l3.5 -3.5"/>
+              <path d="M35 299 l-4 -3.5"/>
+              <path d="M62 296.8 l3.5 4"/>
+              <path d="M76 295.6 l3 -3"/>
+            </g>
+            <!-- weather pitting -->
+            <g fill="rgba(96,76,56,.12)">
+              <ellipse cx="30" cy="120" rx="2.6" ry="1.7"/>
+              <ellipse cx="66" cy="256" rx="1.9" ry="1.3"/>
+              <ellipse cx="24" cy="352" rx="2.2" ry="1.5"/>
+              <ellipse cx="72" cy="72" rx="1.5" ry="1.1"/>
+            </g>
+          </svg>
+          <!-- lit lips, screened so they brighten the stone rather than sit on it -->
+          <svg class="cracks-lit" viewBox="0 0 100 400" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <filter id="litL" x="-90%" y="-90%" width="280%" height="280%">
+                <feGaussianBlur stdDeviation=".5"/>
+              </filter>
+            </defs>
+            <g transform="translate(-0.42,-0.5)" fill="rgba(120,104,80,.5)" filter="url(#litL)">
+              <path d="M10 46 L18 43.95 L25 44.98 L33 41.8 L39 43.05 L46 39.65 L52 41.32 L59 38.7 L66 40.1 L73 37.2 L80 38.55 L88 36.4 L80 39.05 L73 38.4 L66 40.7 L59 40.1 L52 41.88 L46 41.55 L39 43.75 L33 43.4 L25 45.42 L18 44.85 Z"/>
+              <path d="M45.5 40.6 L49.7 45 L52.85 49 L55 53 L53.15 49 L50.3 45 L46.5 40.6 Z"/>
+              <path d="M8 180 L16 178.2 L23 179.4 L31 176.65 L38 178.3 L45 175.35 L51 177.15 L58 174.8 L65 176.05 L72 173.7 L79 175 L86 173.4 L79 175.4 L72 174.7 L65 176.75 L58 176 L51 177.65 L45 177.05 L38 178.9 L31 178.15 L23 179.8 L16 179 Z"/>
+              <path d="M30.55 177.4 L33.75 172 L35.88 167 L37 162 L36.12 167 L34.25 172 L31.45 177.4 Z"/>
+              <path d="M12 302 L20 300.05 L27 301.22 L35 298.3 L42 299.92 L49 297 L55 298.78 L62 296.25 L69 297.5 L76 295.15 L83 296.6 L76 296.05 L69 298.1 L62 297.35 L55 299.22 L49 298.6 L42 300.48 L35 299.7 L27 301.58 L20 300.75 Z"/>
+            </g>
+          </svg>
+        </div>
+        <div class="base"><div class="torus"></div><div class="plinth"></div></div>
+      </div>
+
+      <!-- inner room -->
+      <div class="cella">
+        <h1>popic</h1>
+        <p class="tagline">Kitchen &middot; Iron &middot; Code</p>
+
+        <svg class="meander" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <pattern id="keyTop" width="20" height="16" patternUnits="userSpaceOnUse">
+              <path d="M0 14 H16 V4 H6 V10 H12" fill="none" stroke="#e8b53a" stroke-width="2"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="16" fill="url(#keyTop)"/>
+        </svg>
+
+        <h2>About me</h2>
+        <div class="about">
+          <p>
+            My name is Pop Ion Nu&#539;u, but nearly everyone knows me as <strong>popic</strong> —
+            a nickname that started in games and slowly followed me everywhere else.
+          </p>
+          <p>
+            I'm 18, born on the 4th of June 2008. Most of my time goes to three things:
+            cooking, the gym, and Counter-Strike 2. Cooking taught me patience, the gym
+            taught me consistency, and CS2 taught me to keep a level head when a round
+            starts going sideways.
+          </p>
+          <p>
+            Recently I've added something new to the list — I've just started learning to
+            code and build websites. This page is one of my first attempts, and I intend
+            to keep building.
+          </p>
+        </div>
+
+        <div class="tags">
+          <button class="tag" type="button" aria-expanded="false">
+            <span class="label">&#127859; Cooking</span>
+            <span class="blurb">
+              Cooking is patience made edible. It teaches you to plan ahead, to work with
+              your hands, and to accept that good things take the time they take. It quietly
+              improves how you eat, saves you money, and gives you something warm to offer
+              the people you care about — few skills pay you back so directly.
+            </span>
+          </button>
+
+          <button class="tag" type="button" aria-expanded="false">
+            <span class="label">&#127947; Gym</span>
+            <span class="blurb">
+              The gym builds far more than muscle. Showing up on the days you don't feel like
+              it is discipline you carry into everything else. It sharpens sleep, steadies
+              your mood, and burns off stress — and progress you can measure teaches you the
+              most useful lesson there is: consistency beats intensity.
+            </span>
+          </button>
+
+          <button class="tag" type="button" aria-expanded="false">
+            <span class="label">&#127919; CS 2</span>
+            <span class="blurb">
+              Counter-Strike is a thinking game wearing an action game's clothes. It trains
+              focus, fast decisions under pressure, and clear communication with people who
+              are counting on you. Losing a round without losing your head is a real skill —
+              and staying calm when things go wrong transfers well beyond the server.
+            </span>
+          </button>
+
+          <button class="tag" type="button" aria-expanded="false">
+            <span class="label">&#128187; Learning to code</span>
+            <span class="blurb">
+              Coding rewards curiosity and stubbornness in equal measure. It teaches you to
+              break a big problem into small ones, to read errors instead of fearing them,
+              and to keep going after the tenth failed attempt. Best of all, it turns an idea
+              into something real that anyone can open — like this page.
+            </span>
+          </button>
+        </div>
+
+        <p class="hint">Click a hobby to read more</p>
+
+        <svg class="meander" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <pattern id="keyBot" width="20" height="16" patternUnits="userSpaceOnUse">
+              <path d="M0 14 H16 V4 H6 V10 H12" fill="none" stroke="#e8b53a" stroke-width="2"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="16" fill="url(#keyBot)"/>
+        </svg>
+      </div>
+
+      <!-- right column (different cracks, so the pair isn't a mirror) -->
+      <div class="column">
+        <div class="capital"><div class="abacus"></div><div class="echinus"></div></div>
+        <div class="shaft">
+          <svg class="flutes" viewBox="0 0 100 400" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="flR" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0"   stop-color="#fff8ec" stop-opacity=".14"/>
+                <stop offset=".2"  stop-color="#4b3826" stop-opacity=".28"/>
+                <stop offset=".4"  stop-color="#4b3826" stop-opacity=".34"/>
+                <stop offset=".6"  stop-color="#4b3826" stop-opacity=".08"/>
+                <stop offset=".8"  stop-color="#fff8ec" stop-opacity=".38"/>
+                <stop offset=".93" stop-color="#fff8ec" stop-opacity=".16"/>
+                <stop offset="1"   stop-color="#4b3826" stop-opacity=".16"/>
+              </linearGradient>
+              <linearGradient id="brR" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0"   stop-color="#3f2e1e" stop-opacity=".62"/>
+                <stop offset=".1"  stop-color="#3f2e1e" stop-opacity=".3"/>
+                <stop offset=".3"  stop-color="#fff8ec" stop-opacity=".16"/>
+                <stop offset=".5"  stop-color="#fff8ec" stop-opacity="0"/>
+                <stop offset=".75" stop-color="#3f2e1e" stop-opacity=".2"/>
+                <stop offset="1"   stop-color="#3f2e1e" stop-opacity=".66"/>
+              </linearGradient>
+              <linearGradient id="wrR" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0" stop-color="#4a3820" stop-opacity=".4"/>
+                <stop offset="1" stop-color="#4a3820" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+
+            <g fill="url(#flR)">
+              <rect x="0"     y="0" width="2.02"  height="400"/>
+              <rect x="2.02"  y="0" width="5.92"  height="400"/>
+              <rect x="7.94"  y="0" width="9.31"  height="400"/>
+              <rect x="17.25" y="0" width="11.98" height="400"/>
+              <rect x="29.23" y="0" width="13.66" height="400"/>
+              <rect x="42.89" y="0" width="14.22" height="400"/>
+              <rect x="57.11" y="0" width="13.66" height="400"/>
+              <rect x="70.77" y="0" width="11.98" height="400"/>
+              <rect x="82.75" y="0" width="9.31"  height="400"/>
+              <rect x="92.06" y="0" width="5.92"  height="400"/>
+              <rect x="97.98" y="0" width="2.02"  height="400"/>
+            </g>
+
+            <g fill="#fff8ec" opacity=".2">
+              <rect x="1.79"  y="0" width=".46" height="400"/>
+              <rect x="7.71"  y="0" width=".46" height="400"/>
+              <rect x="17.02" y="0" width=".46" height="400"/>
+              <rect x="29"    y="0" width=".46" height="400"/>
+              <rect x="42.66" y="0" width=".46" height="400"/>
+              <rect x="56.88" y="0" width=".46" height="400"/>
+              <rect x="70.54" y="0" width=".46" height="400"/>
+              <rect x="82.52" y="0" width=".46" height="400"/>
+              <rect x="91.83" y="0" width=".46" height="400"/>
+              <rect x="97.75" y="0" width=".46" height="400"/>
+            </g>
+
+            <rect width="100" height="400" fill="url(#brR)"/>
+
+            <!-- joints sit at different heights: the two columns weren't cut alike -->
+            <g>
+              <rect x="0" y="88"    width="100" height=".9" fill="#4b3826" opacity=".3"/>
+              <rect x="0" y="88.9"  width="100" height=".7" fill="#fff8ec" opacity=".18"/>
+              <rect x="0" y="186"   width="100" height=".9" fill="#4b3826" opacity=".28"/>
+              <rect x="0" y="186.9" width="100" height=".7" fill="#fff8ec" opacity=".16"/>
+              <rect x="0" y="285"   width="100" height=".9" fill="#4b3826" opacity=".3"/>
+              <rect x="0" y="285.9" width="100" height=".7" fill="#fff8ec" opacity=".18"/>
+            </g>
+
+            <g fill="none" stroke="#6b5540" stroke-opacity=".13" stroke-width=".7">
+              <path d="M76 12 C69 66 82 116 72 168 S79 258 70 310 S76 362 71 396"/>
+              <path d="M31 44 C24 96 37 144 27 196 S34 266 25 322"/>
+              <path d="M55 138 C49 178 59 214 52 258"/>
+            </g>
+
+            <rect x="0" y="296" width="100" height="104" fill="url(#wrR)"/>
+          </svg>
+
+          <svg class="cracks" viewBox="0 0 100 400" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="voidR" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0"   stop-color="#6d5741" stop-opacity=".10"/>
+                <stop offset=".2"  stop-color="#54402c" stop-opacity=".3"/>
+                <stop offset=".5"  stop-color="#3f2d1c" stop-opacity=".46"/>
+                <stop offset=".8"  stop-color="#54402c" stop-opacity=".28"/>
+                <stop offset="1"   stop-color="#6d5741" stop-opacity=".08"/>
+              </linearGradient>
+              <linearGradient id="stainR" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#7a6039" stop-opacity=".14"/>
+                <stop offset="1" stop-color="#59401f" stop-opacity="0"/>
+              </linearGradient>
+              <filter id="aoR" x="-90%" y="-90%" width="280%" height="280%">
+                <feGaussianBlur stdDeviation="1.15"/>
+              </filter>
+              <filter id="softR" x="-90%" y="-90%" width="280%" height="280%">
+                <feGaussianBlur stdDeviation=".55"/>
+              </filter>
+              <filter id="wetR" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="2.6"/>
+              </filter>
+              <g id="crkR">
+                <path d="M12 100 L20 101.2 L27 100.4 L35 102.05 L42 101.3 L49 102.9 L55 102.35 L62 104 L69 103.08 L76 104.95 L84 104 L76 105.85 L69 103.72 L62 105.2 L55 102.85 L49 104.7 L42 101.9 L35 103.55 L27 100.8 L20 102 Z"/>
+                <path d="M48.55 103.8 L51.75 98 L53.88 93 L55 88 L54.12 93 L52.25 98 L49.45 103.8 Z"/>
+                <path d="M9 230 L17 228.02 L24 229.2 L32 226.2 L39 228.12 L46 225.15 L52 227.16 L59 224.55 L66 226.1 L73 223.7 L81 225.18 L89 223.6 L81 225.62 L73 224.7 L66 226.7 L59 225.85 L52 227.64 L46 226.85 L39 228.68 L32 227.8 L24 229.6 L17 228.78 Z"/>
+                <path d="M31.55 227 L34.75 232.5 L36.88 237.5 L38 242 L37.12 237.5 L35.25 232.5 L32.45 227 Z"/>
+                <path d="M14 340 L22 341.05 L29 340.22 L37 341.55 L44 340.94 L51 342.3 L58 341.78 L65 343.35 L72 342.6 L79 344.4 L72 343 L65 344.25 L58 342.22 L51 343.7 L44 341.46 L37 342.85 L29 340.58 L22 341.75 Z"/>
+              </g>
+            </defs>
+
+            <g filter="url(#wetR)" fill="url(#stainR)">
+              <rect x="22" y="104" width="52" height="24"/>
+              <rect x="20" y="228" width="56" height="24"/>
+              <rect x="24" y="342" width="48" height="22"/>
+            </g>
+
+            <use href="#crkR" fill="rgba(90,72,54,.26)" filter="url(#aoR)"/>
+            <use href="#crkR" fill="rgba(74,56,38,.28)" transform="translate(0.38,0.46)" filter="url(#softR)"/>
+            <use href="#crkR" fill="url(#voidR)"/>
+            <g fill="none" stroke="rgba(88,68,50,.24)" stroke-width=".5" stroke-linecap="round">
+              <path d="M35 102.8 l-4.5 -3.5"/>
+              <path d="M62 104.6 l4 4"/>
+              <path d="M76 105.4 l3 -3"/>
+              <path d="M32 227 l-4.5 3.5"/>
+              <path d="M59 225.2 l3.5 -3.5"/>
+              <path d="M73 224.2 l3.5 4"/>
+              <path d="M37 342.2 l-3.5 3"/>
+              <path d="M65 343.8 l3.5 -3"/>
+            </g>
+            <g fill="rgba(96,76,56,.12)">
+              <ellipse cx="70" cy="150" rx="2.4" ry="1.6"/>
+              <ellipse cx="26" cy="288" rx="2" ry="1.4"/>
+              <ellipse cx="60" cy="60" rx="1.7" ry="1.2"/>
+              <ellipse cx="36" cy="380" rx="2.3" ry="1.5"/>
+            </g>
+          </svg>
+          <svg class="cracks-lit" viewBox="0 0 100 400" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <filter id="litR" x="-90%" y="-90%" width="280%" height="280%">
+                <feGaussianBlur stdDeviation=".5"/>
+              </filter>
+            </defs>
+            <g transform="translate(-0.42,-0.5)" fill="rgba(120,104,80,.5)" filter="url(#litR)">
+              <path d="M12 100 L20 101.2 L27 100.4 L35 102.05 L42 101.3 L49 102.9 L55 102.35 L62 104 L69 103.08 L76 104.95 L84 104 L76 105.85 L69 103.72 L62 105.2 L55 102.85 L49 104.7 L42 101.9 L35 103.55 L27 100.8 L20 102 Z"/>
+              <path d="M48.55 103.8 L51.75 98 L53.88 93 L55 88 L54.12 93 L52.25 98 L49.45 103.8 Z"/>
+              <path d="M9 230 L17 228.02 L24 229.2 L32 226.2 L39 228.12 L46 225.15 L52 227.16 L59 224.55 L66 226.1 L73 223.7 L81 225.18 L89 223.6 L81 225.62 L73 224.7 L66 226.7 L59 225.85 L52 227.64 L46 226.85 L39 228.68 L32 227.8 L24 229.6 L17 228.78 Z"/>
+              <path d="M31.55 227 L34.75 232.5 L36.88 237.5 L38 242 L37.12 237.5 L35.25 232.5 L32.45 227 Z"/>
+              <path d="M14 340 L22 341.05 L29 340.22 L37 341.55 L44 340.94 L51 342.3 L58 341.78 L65 343.35 L72 342.6 L79 344.4 L72 343 L65 344.25 L58 342.22 L51 343.7 L44 341.46 L37 342.85 L29 340.58 L22 341.75 Z"/>
+            </g>
+          </svg>
+        </div>
+        <div class="base"><div class="torus"></div><div class="plinth"></div></div>
+      </div>
+    </div>
+
+    <div class="stylobate">
+      <div></div><div></div><div></div>
+    </div>
+  </main>
+
+<script>
+  const tags = document.querySelectorAll('.tag');
+  const cloudArea = document.querySelector('.tags');
+  let closeTimer;
+
+  function closeAll() {
+    tags.forEach(t => {
+      t.classList.remove('open');
+      t.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  tags.forEach(tag => {
+    tag.addEventListener('click', e => {
+      e.stopPropagation();
+      const wasOpen = tag.classList.contains('open');
+      closeAll();
+      if (!wasOpen) {
+        tag.classList.add('open');
+        tag.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+
+  // click anywhere else — everything settles back
+  document.addEventListener('click', closeAll);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
+
+  // move the mouse away from the tags — they settle back too (short grace period)
+  cloudArea.addEventListener('mouseleave', () => { closeTimer = setTimeout(closeAll, 500); });
+  cloudArea.addEventListener('mouseenter', () => clearTimeout(closeTimer));
+</script>
+</body>
+</html>
