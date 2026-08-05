@@ -20,8 +20,24 @@ const BOT_TOKEN = requireEnv("BOT_TOKEN");
 const MINI_APP_URL = process.env.MINI_APP_URL ?? "";
 
 const bot = new Bot(BOT_TOKEN);
-const claude = new Anthropic();                       // reads ANTHROPIC_API_KEY
-const openai = new OpenAI();                          // reads OPENAI_API_KEY
+
+// Both SDKs throw the moment they're constructed if their key is missing, so
+// they're built on first use instead of at startup. That way the bot runs with
+// only a BOT_TOKEN, and just the feature whose key is absent stays switched off.
+let claudeClient;
+let openaiClient;
+
+function getClaude() {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  claudeClient ??= new Anthropic();
+  return claudeClient;
+}
+
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  openaiClient ??= new OpenAI();
+  return openaiClient;
+}
 
 // Feedback lives in a JSON file for now. Supabase is the intended home for it
 // (see the project's stack notes) — swapping this pair of functions is the
@@ -71,6 +87,14 @@ bot.command("feedback", async (ctx) => {
 // ---------- voice feedback — Whisper ----------
 
 bot.on("message:voice", async (ctx) => {
+  const openai = getOpenAI();
+  if (!openai) {
+    await ctx.reply(
+      "I can't listen to voice yet — no OpenAI key set up. Write it to me instead and it still reaches popic.",
+    );
+    return;
+  }
+
   const note = await ctx.reply("Listening…");
   try {
     const audio = await fetchTelegramFile(ctx, ctx.message.voice.file_id);
@@ -116,6 +140,12 @@ bot.on("message:text", async (ctx) => {
 // ---------- OCR — Claude reads the document ----------
 
 bot.on(["message:photo", "message:document"], async (ctx) => {
+  const claude = getClaude();
+  if (!claude) {
+    await ctx.reply("I can't read documents yet — no Anthropic key set up.");
+    return;
+  }
+
   const note = await ctx.reply("Reading…");
   try {
     const photo = ctx.message.photo?.at(-1);          // largest size Telegram sent
@@ -209,5 +239,10 @@ function requireEnv(name) {
 bot.catch((err) => console.error("Bot error:", err));
 
 bot.start({
-  onStart: (me) => console.log(`@${me.username} is running. Ctrl+C to stop.`),
+  onStart: (me) => {
+    console.log(`@${me.username} is running. Ctrl+C to stop.`);
+    console.log(`  mini app  ${MINI_APP_URL || "off — set MINI_APP_URL"}`);
+    console.log(`  voice     ${process.env.OPENAI_API_KEY ? "on" : "off — set OPENAI_API_KEY"}`);
+    console.log(`  ocr       ${process.env.ANTHROPIC_API_KEY ? "on" : "off — set ANTHROPIC_API_KEY"}`);
+  },
 });
